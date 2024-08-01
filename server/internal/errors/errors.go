@@ -15,6 +15,8 @@ type ErrUnexistingUser error
 
 type ErrWrongUserID error
 
+type ErrBadUser error
+
 func (p PermissionDenied) Error() string {
 	return p.Err.Error()
 }

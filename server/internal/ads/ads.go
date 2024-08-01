@@ -1,6 +1,9 @@
 package ads
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type Ad struct {
 	ID           int64
@@ -26,9 +29,18 @@ func (ad *Ad) ChangeModificationTime() {
 	ad.LastModified = time.Now()
 }
 
-func (ad *Ad) ChangeStatus(Published bool) {
+func (ad *Ad) ChangeStatus(Published bool) error {
+	if ad.Published == Published {
+		if ad.Published {
+			return errors.New("Ad is already published")
+		}
+		if !ad.Published {
+			return errors.New("Ad is already unpublished")
+		}
+	}
 	ad.Published = Published
 	ad.ChangeModificationTime()
+	return nil
 }
 
 func (ad *Ad) ChangeTitleAndText(title, text string) {

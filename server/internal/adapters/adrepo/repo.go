@@ -1,30 +1,20 @@
 package adrepo
 
 import (
-	"fmt"
-	"net/http"
 	"server/internal/ads"
-	"server/internal/app"
 	errors2 "server/internal/errors"
-	"server/internal/errors/cookie_errors"
+	"server/internal/repo"
 	"server/internal/restriction"
 	"server/internal/user"
 	"sync"
-	"time"
 )
 
 // If you want new Repository implementation,
 // change this
 type SliceRepository struct {
-	Ads    *[]ads.Ad
-	Users  *[]user.User
-	Cookie *map[string]UserValid
-	Mu     *sync.RWMutex
-}
-
-type UserValid struct {
-	UserID int64
-	Valid  time.Time
+	Ads   *[]ads.Ad
+	Users *[]user.User
+	Mu    *sync.RWMutex
 }
 
 func (r SliceRepository) ExistAdWithID(id int64) bool {
@@ -115,38 +105,9 @@ func (r SliceRepository) ChangeUser(UserID int64, user user.User) error {
 	return nil
 }
 
-func (r SliceRepository) GetUserByCookieValue(CookieValue string) (int64, error) {
-	r.Mu.RLock()
-	u, ok := (*r.Cookie)[CookieValue]
-	r.Mu.RUnlock()
-	if !ok {
-		return u.UserID, cookie_errors.NewErrUnexistingCookie(CookieValue)
-	}
-	if u.Valid.Before(time.Now()) {
-		r.DeleteCookie(CookieValue)
-		return 0, cookie_errors.NewExpiredCookie()
-	}
-	return u.UserID, nil
-}
-
-func (r SliceRepository) DeleteCookie(name string) {
-	delete(*r.Cookie, name)
-}
-
-func (r SliceRepository) AddCookie(cookie http.Cookie, UserID int64) {
-	r.Mu.Lock()
-	(*r.Cookie)[cookie.Value] = UserValid{
-		UserID: UserID,
-		Valid:  cookie.Expires,
-	}
-	r.Mu.Unlock()
-	fmt.Println(r.Cookie, r.Users, r.Ads)
-}
-
-func New() app.Repository {
+func New() repo.Repository {
 	var ads []ads.Ad = make([]ads.Ad, 0)
 	var users []user.User = make([]user.User, 0)
-	var cookie map[string]UserValid = make(map[string]UserValid, 0)
 	var Mu = sync.RWMutex{}
-	return SliceRepository{Ads: &ads, Users: &users, Mu: &Mu, Cookie: &cookie}
+	return SliceRepository{Ads: &ads, Users: &users, Mu: &Mu}
 }

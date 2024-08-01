@@ -1,26 +1,23 @@
 package middleware
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"server/internal/app"
 	"server/internal/ports/httpgin/cookie"
 )
 
-func SetUpCheckAuthentification(a app.App) func(*gin.Context) {
+func SetUpCheckAuthentification(repo cookie.CookieRepository) func(*gin.Context) {
 	return func(c *gin.Context) {
 		cookieValue, err := c.Cookie(cookie.CookieName)
-		fmt.Println(cookieValue, err)
 		if err != nil {
 			c.AbortWithStatus(http.StatusUnauthorized)
+			return
 		}
-		u, err := a.GetUserByCookie(c, cookieValue)
-		fmt.Println(u, err)
+		u, err := repo.GetUserIDByCookieValue(cookieValue)
 		if err != nil {
-			c.Error(err)
-			c.AbortWithStatus(http.StatusMethodNotAllowed)
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
 		}
-		c.Set("UserID", u.ID)
+		c.Set("UserID", u)
 	}
 }

@@ -3,10 +3,13 @@ package httpgin
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	validator "github.com/stas1404/validator"
 	"net/http"
 	"server/internal/ads"
 	"server/internal/app"
 	errors2 "server/internal/errors"
+	"server/internal/errors/cookie_errors"
+	"server/internal/ports"
 	"server/internal/ports/httpgin/cookie"
 	"server/internal/restriction"
 	"server/internal/user"
@@ -18,18 +21,12 @@ func SetUpGetAdByID(a app.App) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 		if err != nil {
-			c.Status(http.StatusMisdirectedRequest)
-			c.Writer.Write([]byte("<p>" + err.Error() + "</p>"))
+			GetStatusAndAbort(err, c)
 			return
 		}
 		ad, err := a.GetAd(c, id)
 		if err != nil {
-			defer c.Writer.Write([]byte("<p>" + err.Error() + "</p>"))
-			if err.Error() == errors2.NewErrUnexistingAd(id).Error() {
-				c.Status(http.StatusNotFound)
-				return
-			}
-			c.Status(http.StatusInsufficientStorage)
+			GetStatusAndAbort(err, c)
 			return
 		}
 		c.JSON(http.StatusOK, ad)
@@ -41,10 +38,10 @@ func SetUpGetAdCorresponding(a app.App) func(c *gin.Context) {
 		var res restriction.Restriction
 		err := c.ShouldBind(&res)
 		if err != nil {
-			c.Status(http.StatusBadRequest)
-			c.Writer.Write([]byte("<p>" + err.Error() + "</p>"))
+			GetStatusAndAbort(err, c)
 			return
 		}
+		fmt.Println(res)
 		ads := a.GetAdsCorresponding(c, res)
 		c.JSON(http.StatusOK, ads)
 	}
@@ -52,60 +49,56 @@ func SetUpGetAdCorresponding(a app.App) func(c *gin.Context) {
 
 func SetUpCreateUser(a app.App) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		var u user.User
+		var u ports.ResponseUser
 		err := c.BindJSON(&u)
 		if err != nil {
-			WriteError(http.StatusMethodNotAllowed, err, c)
+			GetStatusAndAbort(err, c)
 			return
 		}
 		if err = u.Check(); err != nil {
-			WriteError(http.StatusMethodNotAllowed, err, c)
+			GetStatusAndAbort(err, c)
 			return
 		}
-		cookie := http.Cookie{
-			Name:    cookie.CookieName,
-			Value:   cookie.GenerateCookieValue(u),
-			Expires: time.Now().Add(time.Hour),
-			Path:    "/",
-		}
-		u, err = a.CreateUser(c, u.Nickname, u.Email, u.Password, cookie)
+		us, err := a.CreateUser(c, u.Nickname, u.Email, u.Password)
 		if err != nil {
-			WriteError(http.StatusInsufficientStorage, err, c)
+			GetStatusAndAbort(err, c)
 			return
 		}
-		http.SetCookie(c.Writer, &cookie)
-		c.JSON(http.StatusCreated, u)
+		c.JSON(http.StatusCreated, us)
 	}
 }
 
-func SetUpAuthorization(a app.App) func(*gin.Context) {
+func SetUpAuthorization(a app.App, cookies cookie.CookieRepository) func(*gin.Context) {
 	return func(c *gin.Context) {
-		var reqUser user.User
+		var reqUser ports.ResponseUser
 		err := c.BindJSON(&reqUser)
 		if err != nil {
-			WriteError(http.StatusMethodNotAllowed, err, c)
+			GetStatusAndAbort(err, c)
 			return
 		}
 		if err = reqUser.Check(); err != nil {
-			WriteError(http.StatusMethodNotAllowed, err, c)
+			GetStatusAndAbort(err, c)
 			return
 		}
 		exUser, err := a.GetUserByID(c, reqUser.ID)
 		if err != nil {
-			c.AbortWithStatus(http.StatusForbidden)
+			GetStatusAndAbort(err, c)
+			return
 		}
-		if !user.AreSame(exUser, reqUser) {
+		fmt.Println(exUser, reqUser)
+		if !user.AreSame(exUser, user.User(reqUser)) {
 			c.AbortWithStatus(http.StatusForbidden)
+			return
 		}
-		cookie := http.Cookie{
+		co := http.Cookie{
 			Name:     cookie.CookieName,
 			Value:    cookie.GenerateCookieValue(exUser),
 			Expires:  time.Now().Add(time.Hour),
 			Path:     "/",
 			HttpOnly: true,
 		}
-		a.CreateCookie(c, cookie, exUser.ID)
-		http.SetCookie(c.Writer, &cookie)
+		cookies.AddCookie(co, exUser.ID)
+		http.SetCookie(c.Writer, &co)
 	}
 }
 
@@ -114,13 +107,12 @@ func SetUpCreateAd(app app.App) func(*gin.Context) {
 		var ad ads.Ad
 		err := c.BindJSON(&ad)
 		if err != nil {
-			WriteError(http.StatusBadRequest, err, c)
+			GetStatusAndAbort(err, c)
 			return
 		}
-		fmt.Println(ad, err)
-		ad, err = app.CreateAd(c, ad.Title, ad.Text, c.GetInt64("UserID")) //c.Value("UserID").(int64))
+		ad, err = app.CreateAd(c, ad.Title, ad.Text, c.GetInt64("UserID"))
 		if err != nil {
-			WriteError(http.StatusBadRequest, err, c)
+			GetStatusAndAbort(err, c)
 			return
 		}
 		c.JSON(http.StatusCreated, ad)
@@ -131,43 +123,110 @@ func SetUpModifyAd(a app.App) func(*gin.Context) {
 	return func(c *gin.Context) {
 		id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 		if err != nil {
-			WriteError(http.StatusMisdirectedRequest, err, c)
+			GetStatusAndAbort(err, c)
 			return
 		}
 		ad, err := a.GetAd(c, id)
 		if err != nil {
-			if err.Error() == errors2.NewErrUnexistingAd(id).Error() {
-				WriteError(http.StatusNotFound, err, c)
-				return
-			}
-			WriteError(http.StatusInsufficientStorage, err, c)
+			GetStatusAndAbort(err, c)
 			return
 		}
 		if ad.AuthorID != c.GetInt64("UserID") {
-			WriteError(http.StatusForbidden, errors2.NewErrWrongUserID(c.GetInt64("UserID")), c)
+			GetStatusAndAbort(errors2.NewErrWrongUserID(c.GetInt64("UserID")), c)
 			return
 		}
 		err = c.BindJSON(&ad)
 		if err != nil {
-			WriteError(http.StatusBadRequest, err, c)
-			return
-		}
-		fmt.Println("New add: ", ad)
-		ad, err = a.ChangeAdStatus(c, ad.ID, ad.AuthorID, ad.Published)
-		if err != nil {
-			WriteError(http.StatusBadRequest, err, c)
+			GetStatusAndAbort(err, c)
 			return
 		}
 		ad, err = a.UpdateAd(c, ad.ID, ad.AuthorID, ad.Title, ad.Text)
 		if err != nil {
-			WriteError(http.StatusBadRequest, err, c)
+			GetStatusAndAbort(err, c)
 			return
 		}
 		c.JSON(http.StatusOK, ad)
 	}
 }
 
-func WriteError(code int, err error, c *gin.Context) {
+func SetUpPublishAd(a app.App) func(*gin.Context) {
+	return func(c *gin.Context) {
+		UserID := c.GetInt64("UserID")
+		AdID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if err != nil {
+			GetStatusAndAbort(err, c)
+		}
+		ad, err := a.ChangeAdStatus(c, AdID, UserID, true)
+		if err != nil {
+			GetStatusAndAbort(err, c)
+		}
+		c.JSON(http.StatusOK, ad)
+	}
+}
+
+func SetUpUnPublishAd(a app.App) func(*gin.Context) {
+	return func(c *gin.Context) {
+		UserID := c.GetInt64("UserID")
+		AdID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if err != nil {
+			GetStatusAndAbort(err, c)
+		}
+		ad, err := a.ChangeAdStatus(c, AdID, UserID, false)
+		if err != nil {
+			GetStatusAndAbort(err, c)
+		}
+		c.JSON(http.StatusOK, ad)
+	}
+}
+
+func SetUpEditUser(a app.App) func(*gin.Context) {
+	return func(c *gin.Context) {
+		id := c.GetInt64("UserID")
+		us, err := a.GetUserByID(c, id)
+		if err != nil {
+			GetStatusAndAbort(err, c)
+			return
+		}
+		err = c.BindJSON(&us)
+		if err != nil {
+			GetStatusAndAbort(err, c)
+			return
+		}
+		us.ID = id
+		u := ports.ResponseUser(us)
+		if err = u.Check(); err != nil {
+			GetStatusAndAbort(err, c)
+			return
+		}
+		us, err = a.UpdateUser(c, id, u.Nickname, u.Email, u.Password)
+		if err != nil {
+			GetStatusAndAbort(err, c)
+		}
+		c.JSON(http.StatusOK, us)
+	}
+}
+
+func GetStatusAndAbort(err error, c *gin.Context) {
+	code := http.StatusNotFound
+	switch err.(type) {
+	case errors2.ErrBadUser:
+		code = http.StatusBadRequest
+	case errors2.ErrWrongUserID:
+		code = http.StatusBadRequest
+	case errors2.PermissionDenied:
+		code = http.StatusBadRequest
+	case errors2.ErrUnexistingUser:
+		code = http.StatusNotFound
+	case errors2.ErrUnexistingAd:
+		code = http.StatusNotFound
+	case cookie_errors.ErrUnexistingCookie:
+		code = http.StatusUnauthorized
+	case cookie_errors.ExpiredCookie:
+		code = http.StatusUnauthorized
+	case validator.ValidationErrors:
+		code = http.StatusBadRequest
+	}
 	c.Status(code)
 	c.Writer.Write([]byte("<p>" + err.Error() + "</p>"))
+	c.AbortWithError(code, err)
 }
