@@ -6,13 +6,13 @@ import (
 )
 
 type Ad struct {
-	ID           int64
-	Title        string `validate:"min:1, max:100"`
-	Text         string `validate:"min:1, max:400"`
-	AuthorID     int64
-	Published    bool `json:"published"`
-	Created      time.Time
-	LastModified time.Time
+	ID           int64     `json:"id"`
+	Title        string    `validate:"min:1, max:100", json:"title"`
+	Text         string    `validate:"min:1, max:400", json:"text"`
+	AuthorID     int64     `json:"author_id"`
+	Published    bool      `json:"published"`
+	Created      time.Time `json:"created"`
+	LastModified time.Time `json:"lastModified"`
 }
 
 func New(Title, Text string, AuthorID int64) Ad {

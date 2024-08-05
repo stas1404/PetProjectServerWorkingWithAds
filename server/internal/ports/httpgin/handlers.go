@@ -85,7 +85,6 @@ func SetUpAuthorization(a app.App, cookies cookie.CookieRepository) func(*gin.Co
 			GetStatusAndAbort(err, c)
 			return
 		}
-		fmt.Println(exUser, reqUser)
 		if !user.AreSame(exUser, user.User(reqUser)) {
 			c.AbortWithStatus(http.StatusForbidden)
 			return

@@ -4,11 +4,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"server/internal/adapters/adrepo"
 	"server/internal/ads"
-	"server/internal/app"
+	repo2 "server/internal/repo"
 	"testing"
 )
 
-var repo app.Repository = adrepo.New()
+var repo repo2.Repository = adrepo.New()
 
 func TestAddAd(t *testing.T) {
 	err := repo.AddAd(ads.New("first title", "first text", 1))
