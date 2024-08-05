@@ -12,6 +12,11 @@ import (
 	"server/internal/ports/httpgin"
 )
 
+type UserTest struct {
+	User   ports.ResponseUser
+	Cookie http.Cookie
+}
+
 type testClient struct {
 	client  *http.Client
 	baseURL string

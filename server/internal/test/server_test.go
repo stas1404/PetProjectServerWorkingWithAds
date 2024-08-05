@@ -11,11 +11,6 @@ import (
 	"testing"
 )
 
-type UserTest struct {
-	User   ports.ResponseUser
-	Cookie http.Cookie
-}
-
 var users [3]UserTest = [3]UserTest{
 	UserTest{
 		User: ports.ResponseUser{
