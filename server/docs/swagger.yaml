@@ -1,0 +1,359 @@
+basePath: /
+definitions:
+  ports.ResponseAd:
+    properties:
+      created:
+        type: string
+      id:
+        type: integer
+      lastModified:
+        type: string
+      published:
+        type: boolean
+      text:
+        type: string
+      title:
+        type: string
+    type: object
+  ports.ResponseUser:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      nickname:
+        type: string
+      password:
+        type: string
+    type: object
+host: localhost:18080
+info:
+  contact: {}
+  title: Ad server documentation
+  version: "1.0"
+paths:
+  /ads:
+    get:
+      description: get ads corresponding some restrictions
+      parameters:
+      - collectionFormat: csv
+        description: Ad Published
+        in: query
+        items:
+          type: boolean
+        name: published
+        required: true
+        type: array
+      - collectionFormat: csv
+        description: Ad title
+        in: query
+        items:
+          type: string
+        name: title
+        required: true
+        type: array
+      - collectionFormat: csv
+        description: Ad author ID
+        in: query
+        items:
+          type: integer
+        name: author
+        required: true
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ports.ResponseAd'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Show ads
+      tags:
+      - ads
+    post:
+      consumes:
+      - application/json
+      description: Create ad
+      parameters:
+      - description: text of ad
+        in: body
+        name: text
+        required: true
+        schema:
+          type: string
+      - description: title of ad
+        in: body
+        name: title
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ports.ResponseAd'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Create ad
+      tags:
+      - ads
+  /ads/{id}:
+    get:
+      description: get ad by ID
+      parameters:
+      - description: Ad ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ports.ResponseAd'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Show an ad
+      tags:
+      - ads
+  /ads/{id}/edit:
+    put:
+      consumes:
+      - application/json
+      description: Modify existing ad by passing new title and text
+      parameters:
+      - description: text of ad
+        in: body
+        name: text
+        required: true
+        schema:
+          type: string
+      - description: title of ad
+        in: body
+        name: title
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ports.ResponseAd'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Modify ad
+      tags:
+      - ads
+  /ads/{id}/publish:
+    put:
+      description: Change ad status to Published
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ports.ResponseAd'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Publish ad
+      tags:
+      - ads
+  /ads/{id}/unpublish:
+    put:
+      description: Change ad status to UnPublished
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ports.ResponseAd'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: UnPublish ad
+      tags:
+      - ads
+  /users:
+    post:
+      consumes:
+      - application/json
+      description: Create User
+      parameters:
+      - description: User nickname
+        in: body
+        name: nickname
+        required: true
+        schema:
+          type: string
+      - description: User email
+        in: body
+        name: email
+        required: true
+        schema:
+          type: string
+      - description: User password
+        in: body
+        name: password
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ports.ResponseUser'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Create User
+      tags:
+      - users
+  /users/authorization:
+    post:
+      consumes:
+      - application/json
+      description: Authorize User
+      parameters:
+      - description: User ID
+        in: body
+        name: id
+        required: true
+        schema:
+          type: integer
+      - description: User nickname
+        in: body
+        name: nickname
+        required: true
+        schema:
+          type: string
+      - description: User email
+        in: body
+        name: email
+        required: true
+        schema:
+          type: string
+      - description: User password
+        in: body
+        name: password
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Authorize User
+      tags:
+      - users
+  /users/profile/edit:
+    post:
+      consumes:
+      - application/json
+      description: Edit User's password, nickname and email
+      parameters:
+      - description: User nickname
+        in: body
+        name: nickname
+        required: true
+        schema:
+          type: string
+      - description: User email
+        in: body
+        name: email
+        required: true
+        schema:
+          type: string
+      - description: User password
+        in: body
+        name: password
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ports.ResponseUser'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Edit User
+      tags:
+      - users
+swagger: "2.0"

@@ -2,7 +2,10 @@ package httpgin
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"net/http"
+	_ "server/docs"
 	"server/internal/app"
 	"server/internal/ports/httpgin/cookie"
 	"server/internal/ports/httpgin/middleware"
@@ -30,6 +33,8 @@ func NewHTTPServer(port string, a app.App) Server {
 	s.app.PUT("/ads/:id/edit/publish", Authentification, SetUpPublishAd(a))
 	s.app.PUT("/ads/:id/edit/unpublish", Authentification, SetUpUnPublishAd(a))
 	s.app.PUT("/users/profile/edit", Authentification, SetUpEditUser(a))
+	// use ginSwagger middleware to serve the API docs
+	s.app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	return s
 }
 

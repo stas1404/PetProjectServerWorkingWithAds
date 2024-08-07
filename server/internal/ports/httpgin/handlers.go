@@ -1,7 +1,6 @@
 package httpgin
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	validator "github.com/stas1404/validator"
 	"net/http"
@@ -17,6 +16,16 @@ import (
 	"time"
 )
 
+// ShowAd godoc
+// @Summary      Show an ad
+// @Description  get ad by ID
+// @Tags         ads
+// @Produce      json
+// @Param        id   path      int  true  "Ad ID"
+// @Success      200  {object}  ports.ResponseAd
+// @Failure      400  {object} string
+// @Failure      404  {object} string
+// @Router       /ads/{id} [get]
 func SetUpGetAdByID(a app.App) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		id, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -33,6 +42,18 @@ func SetUpGetAdByID(a app.App) func(c *gin.Context) {
 	}
 }
 
+// ShowAds godoc
+// @Summary      Show ads
+// @Description  get ads corresponding some restrictions
+// @Tags         ads
+// @Produce      json
+// @Param        published   query     []bool  true  "Ad Published"
+// @Param        title   query     []string  true  "Ad title"
+// @Param        author   query     []int64  true  "Ad author ID"
+// @Param        created   query     time.Time  true  "Ad creation time" time_format:"2006-01-02" time_utc:"1"
+// @Success      200  {object}  ports.ResponseAd
+// @Failure      400  {object} string
+// @Router       /ads [get]
 func SetUpGetAdCorresponding(a app.App) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var res restriction.Restriction
@@ -41,12 +62,23 @@ func SetUpGetAdCorresponding(a app.App) func(c *gin.Context) {
 			GetStatusAndAbort(err, c)
 			return
 		}
-		fmt.Println(res)
 		ads := a.GetAdsCorresponding(c, res)
 		c.JSON(http.StatusOK, ads)
 	}
 }
 
+// CreateUser godoc
+// @Summary      Create User
+// @Description  Create User
+// @Tags         users
+// @Accept json
+// @Produce      json
+// @Param nickname body string true "User nickname"
+// @Param email body string true "User email"
+// @Param password body string true "User password"
+// @Success      200  {object}  ports.ResponseUser
+// @Failure      400  {object} string
+// @Router       /users [post]
 func SetUpCreateUser(a app.App) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var u ports.ResponseUser
@@ -68,6 +100,19 @@ func SetUpCreateUser(a app.App) func(c *gin.Context) {
 	}
 }
 
+// AuthorizeUser godoc
+// @Summary      Authorize User
+// @Description  Authorize User
+// @Tags         users
+// @Accept json
+// @Produce      json
+// @Param id body int64 true "User ID"
+// @Param nickname body string true "User nickname"
+// @Param email body string true "User email"
+// @Param password body string true "User password"
+// @Success      200
+// @Failure      400  {object} string
+// @Router       /users/authorization [post]
 func SetUpAuthorization(a app.App, cookies cookie.CookieRepository) func(*gin.Context) {
 	return func(c *gin.Context) {
 		var reqUser ports.ResponseUser
@@ -101,6 +146,19 @@ func SetUpAuthorization(a app.App, cookies cookie.CookieRepository) func(*gin.Co
 	}
 }
 
+// CreateAD godoc
+// @Summary      Create ad
+// @Description  Create ad
+// @Tags         ads
+// @Accept json
+// @Produce      json
+// @Param text body string true "text of ad"
+// @Param title body string true "title of ad"
+// @Security ApiKeyAuth
+// @Success      201  {object}  ports.ResponseAd
+// @Failure      400  {object} string
+// @Failure      401  {object} string
+// @Router       /ads [post]
 func SetUpCreateAd(app app.App) func(*gin.Context) {
 	return func(c *gin.Context) {
 		var ad ads.Ad
@@ -118,6 +176,19 @@ func SetUpCreateAd(app app.App) func(*gin.Context) {
 	}
 }
 
+// ModifyAD godoc
+// @Summary      Modify ad
+// @Description  Modify existing ad by passing new title and text
+// @Tags         ads
+// @Accept json
+// @Produce      json
+// @Param text body string true "text of ad"
+// @Param title body string true "title of ad"
+// @Security ApiKeyAuth
+// @Success      200  {object}  ports.ResponseAd
+// @Failure      400  {object} string
+// @Failure      401  {object} string
+// @Router       /ads/{id}/edit [put]
 func SetUpModifyAd(a app.App) func(*gin.Context) {
 	return func(c *gin.Context) {
 		id, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -148,6 +219,17 @@ func SetUpModifyAd(a app.App) func(*gin.Context) {
 	}
 }
 
+// PublishAD godoc
+// @Summary      Publish ad
+// @Description  Change ad status to Published
+// @Tags         ads
+// @Produce      json
+// @Security ApiKeyAuth
+// @Success      200  {object}  ports.ResponseAd
+// @Failure      400  {object} string
+// @Failure      401  {object} string
+// @Failure      404  {object} string
+// @Router       /ads/{id}/publish [put]
 func SetUpPublishAd(a app.App) func(*gin.Context) {
 	return func(c *gin.Context) {
 		UserID := c.GetInt64("UserID")
@@ -163,6 +245,17 @@ func SetUpPublishAd(a app.App) func(*gin.Context) {
 	}
 }
 
+// UnPublishAD godoc
+// @Summary      UnPublish ad
+// @Description  Change ad status to UnPublished
+// @Tags         ads
+// @Produce      json
+// @Security ApiKeyAuth
+// @Success      200  {object}  ports.ResponseAd
+// @Failure      400  {object} string
+// @Failure      401  {object} string
+// @Failure      404  {object} string
+// @Router       /ads/{id}/unpublish [put]
 func SetUpUnPublishAd(a app.App) func(*gin.Context) {
 	return func(c *gin.Context) {
 		UserID := c.GetInt64("UserID")
@@ -178,6 +271,20 @@ func SetUpUnPublishAd(a app.App) func(*gin.Context) {
 	}
 }
 
+// EditUser godoc
+// @Summary      Edit User
+// @Description  Edit User's password, nickname and email
+// @Tags         users
+// @Accept json
+// @Produce      json
+// @Param nickname body string true "User nickname"
+// @Param email body string true "User email"
+// @Param password body string true "User password"
+// @Success      200  {object}  ports.ResponseUser
+// @Failure      400  {object} string
+// @Failure      401  {object} string
+// @Failure      404  {object} string
+// @Router       /users/profile/edit [post]
 func SetUpEditUser(a app.App) func(*gin.Context) {
 	return func(c *gin.Context) {
 		id := c.GetInt64("UserID")
