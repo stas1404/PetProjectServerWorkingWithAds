@@ -3,6 +3,7 @@ package test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -73,6 +74,11 @@ func (c *testClient) CreateUser(nickname, email, password string) (ports.Respons
 	if err != nil {
 		return ports.ResponseUser{}, err
 	}
+
+	if resp.StatusCode != http.StatusCreated {
+		return ports.ResponseUser{}, errors.New("invalid status")
+	}
+
 	b, err := io.ReadAll(resp.Body)
 
 	if err != nil {
@@ -101,8 +107,12 @@ func (c *testClient) Authorize(user ports.ResponseUser) (UserTest, error) {
 
 	resp, err := c.client.Do(req)
 
-	if err != nil || resp.StatusCode != http.StatusOK {
+	if err != nil {
 		return UserTest{}, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return UserTest{}, errors.New("invalid status")
 	}
 
 	var u UserTest = UserTest{
@@ -110,4 +120,43 @@ func (c *testClient) Authorize(user ports.ResponseUser) (UserTest, error) {
 		Cookie: *resp.Cookies()[0],
 	}
 	return u, err
+}
+
+func (c *testClient) CreateAd(user UserTest, title, text string) (ports.ResponseAd, error) {
+	body := map[string]string{
+		"title": title,
+		"text":  text,
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return ports.ResponseAd{}, err
+	}
+	req, err := http.NewRequest(http.MethodPost, c.baseURL+"/ads/", bytes.NewReader(data))
+	if err != nil {
+		return ports.ResponseAd{}, err
+	}
+	req.AddCookie(&user.Cookie)
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := c.client.Do(req)
+
+	if err != nil {
+		return ports.ResponseAd{}, err
+	}
+
+	if resp.StatusCode != http.StatusCreated {
+		return ports.ResponseAd{}, errors.New("invalid status")
+	}
+
+	var ans ports.ResponseAd
+
+	b, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		return ports.ResponseAd{}, err
+	}
+
+	err = json.Unmarshal(b, &ans)
+
+	return ans, err
 }

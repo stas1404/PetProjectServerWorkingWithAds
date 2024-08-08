@@ -202,7 +202,7 @@ func SetUpModifyAd(a app.App) func(*gin.Context) {
 			return
 		}
 		if ad.AuthorID != c.GetInt64("UserID") {
-			GetStatusAndAbort(errors2.NewErrWrongUserID(c.GetInt64("UserID")), c)
+			GetStatusAndAbort(errors2.NewPermissionDenied(c.GetInt64("UserID")), c)
 			return
 		}
 		err = c.BindJSON(&ad)
@@ -312,15 +312,13 @@ func SetUpEditUser(a app.App) func(*gin.Context) {
 	}
 }
 
-func GetStatusAndAbort(err error, c *gin.Context) {
+func GetStatusAndAbort(err any, c *gin.Context) {
 	code := http.StatusNotFound
 	switch err.(type) {
 	case errors2.ErrBadUser:
 		code = http.StatusBadRequest
-	case errors2.ErrWrongUserID:
-		code = http.StatusBadRequest
 	case errors2.PermissionDenied:
-		code = http.StatusBadRequest
+		code = http.StatusForbidden
 	case errors2.ErrUnexistingUser:
 		code = http.StatusNotFound
 	case errors2.ErrUnexistingAd:
@@ -333,6 +331,7 @@ func GetStatusAndAbort(err error, c *gin.Context) {
 		code = http.StatusBadRequest
 	}
 	c.Status(code)
-	c.Writer.Write([]byte("<p>" + err.Error() + "</p>"))
-	c.AbortWithError(code, err)
+	c.Writer.Write([]byte("<p>" + err.(error).Error() + "</p>"))
+	c.Abort()
+	//c.AbortWithError(code, err.(error).Error())
 }

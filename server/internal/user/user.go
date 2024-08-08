@@ -24,5 +24,5 @@ func AreSame(u, m User) bool {
 }
 
 func BadUser(problem string) errors2.ErrBadUser {
-	return errors.New("Can not create User without " + problem)
+	return errors2.ErrBadUser{Err: errors.New("Can not create User without " + problem)}
 }
