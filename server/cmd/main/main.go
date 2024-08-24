@@ -11,7 +11,6 @@ import (
 // @version         1.0
 // @host      localhost:18080
 // @BasePath  /
-
 func main() {
 	server := httpgin.NewHTTPServer(":18080", app.NewApp(adrepo.New()))
 	err := server.Listen()

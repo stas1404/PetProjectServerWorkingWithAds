@@ -1,6 +1,7 @@
 package httpgin
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	validator "github.com/stas1404/validator"
 	"net/http"
@@ -118,19 +119,23 @@ func SetUpAuthorization(a app.App, cookies cookie.CookieRepository) func(*gin.Co
 		var reqUser ports.ResponseUser
 		err := c.BindJSON(&reqUser)
 		if err != nil {
+			fmt.Println("Marshalling")
 			GetStatusAndAbort(err, c)
 			return
 		}
 		if err = reqUser.Check(); err != nil {
+			fmt.Println("Check")
 			GetStatusAndAbort(err, c)
 			return
 		}
 		exUser, err := a.GetUserByID(c, reqUser.ID)
 		if err != nil {
+			fmt.Println("Get User By id")
 			GetStatusAndAbort(err, c)
 			return
 		}
 		if !user.AreSame(exUser, user.User(reqUser)) {
+			fmt.Println("ne saMe")
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}

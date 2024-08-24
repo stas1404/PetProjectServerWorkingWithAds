@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
-	"log"
 	"net/http"
 	"server/internal/ports"
 	"strconv"
@@ -118,14 +117,6 @@ func TestAuthorization(t *testing.T) {
 	users := users
 	cl := getTestClient()
 	for i := range users {
-		UserWithID, err := cl.CreateUser(users[i].User.Nickname, users[i].User.Email, users[i].User.Password)
-		require.NoError(t, err)
-		assert.Equal(t, users[i].User.Email, UserWithID.Email)
-		assert.Equal(t, users[i].User.Nickname, UserWithID.Nickname)
-		assert.Equal(t, users[i].User.Password, UserWithID.Password)
-		users[i].User.ID = UserWithID.ID
-	}
-	for i := range users {
 		auth_user, err := cl.Authorize(users[i].User)
 		require.NoError(t, err)
 		assert.Equal(t, users[i].User.Email, auth_user.User.Email)
@@ -141,13 +132,6 @@ var text [3]string = [3]string{"first text", "second text", "third text"}
 func TestCreateAd(t *testing.T) {
 	cl := getTestClient()
 	users := users[0:3]
-	for i := range users {
-		UserWithID, err := cl.CreateUser(users[i].User.Nickname, users[i].User.Email, users[i].User.Password)
-		require.NoError(t, err)
-		auth_user, err := cl.Authorize(UserWithID)
-		require.NoError(t, err)
-		users[i] = auth_user
-	}
 	users = append(users, UserTest{
 		User:   ports.ResponseUser{},
 		Cookie: http.Cookie{},
@@ -192,17 +176,6 @@ var modified_text [3]string = [3]string{"Modified first text", "Modified second 
 func FuzzModifyAd(f *testing.F) {
 	users := users[0:3]
 	cl := getTestClient()
-	for i := range users {
-		UserWithID, err := cl.CreateUser(users[i].User.Nickname, users[i].User.Email, users[i].User.Password)
-		if err != nil {
-			log.Fatal(users[i], "create user", err)
-		}
-		auth_user, err := cl.Authorize(UserWithID)
-		if err != nil {
-			log.Fatal(users[i], "create user", err)
-		}
-		users[i] = auth_user
-	}
 	users = append(users, UserTest{
 		User:   ports.ResponseUser{},
 		Cookie: http.Cookie{},
