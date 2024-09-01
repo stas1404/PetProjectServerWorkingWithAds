@@ -139,15 +139,15 @@ func SetUpAuthorization(a app.App, cookies cookie.CookieRepository) func(*gin.Co
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
-		co := http.Cookie{
+		cookie := http.Cookie{
 			Name:     cookie.CookieName,
 			Value:    cookie.GenerateCookieValue(exUser),
 			Expires:  time.Now().Add(time.Hour),
 			Path:     "/",
 			HttpOnly: true,
 		}
-		cookies.AddCookie(co, exUser.ID)
-		http.SetCookie(c.Writer, &co)
+		cookies.AddCookie(c, cookie, exUser.ID)
+		http.SetCookie(c.Writer, &cookie)
 	}
 }
 

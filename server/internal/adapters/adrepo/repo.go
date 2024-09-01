@@ -26,7 +26,7 @@ type PostgresRepository struct {
 const QueryTimeout = time.Second
 
 func ConnectionString() string {
-	return "postgres://" + os.Getenv("POSTGRES_USER") + ":" + os.Getenv("POSTGRES_PASSWORD") + "@172.19.0.2:5432/" + os.Getenv("POSTGRES_DB")
+	return "postgres://" + os.Getenv("POSTGRES_USER") + ":" + os.Getenv("POSTGRES_PASSWORD") + "@postgres:5432/" + os.Getenv("POSTGRES_DB")
 }
 
 func SetQueryVariable(q *string, path string) {
@@ -60,6 +60,7 @@ func New() repo.Repository {
 	background := context.Background()
 	m, err := migrate.New("file://internal/adapters/adrepo/migrations",
 		ConnectionString()+"?sslmode=disable")
+	log.Println("Migrate")
 	if err != nil {
 		log.Fatal(err)
 	}

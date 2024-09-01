@@ -13,7 +13,7 @@ func SetUpCheckAuthentification(repo cookie.CookieRepository) func(*gin.Context)
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		u, err := repo.GetUserIDByCookieValue(cookieValue)
+		u, err := repo.GetUserIDByCookieValue(c, cookieValue)
 		if err != nil {
 			c.AbortWithError(http.StatusBadRequest, err)
 			return

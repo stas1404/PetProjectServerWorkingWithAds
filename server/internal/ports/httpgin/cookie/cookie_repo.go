@@ -1,53 +1,48 @@
 package cookie
 
 import (
+	"context"
+	"github.com/redis/go-redis/v9"
+	"log"
 	"net/http"
-	"server/internal/errors/cookie_errors"
-	"sync"
+	"strconv"
 	"time"
 )
 
+const PreffixKey = "ad_server:cookie:"
+
 type CookieRepository interface {
-	GetUserIDByCookieValue(CookieName string) (int64, error)
-	AddCookie(cookie http.Cookie, UserID int64)
-	DeleteCookie(name string)
+	GetUserIDByCookieValue(ctx context.Context, CookieName string) (int64, error)
+	AddCookie(ctx context.Context, cookie http.Cookie, UserID int64)
+	//DeleteCookie(ctx context.Context, name string)
 }
 
-type CookieMapRepository struct {
-	cookies *sync.Map
+type CookieRedisRepository struct {
+	cr *redis.Client
 }
 
-type UserValid struct {
-	UserID int64
-	Valid  time.Time
-}
-
-func (m CookieMapRepository) GetUserIDByCookieValue(CookieValue string) (int64, error) {
-	u, ok := m.cookies.Load(CookieValue)
-	if !ok {
-		return 0, cookie_errors.NewErrUnexistingCookie(CookieValue)
+func (m CookieRedisRepository) GetUserIDByCookieValue(ctx context.Context, CookieValue string) (int64, error) {
+	u_id, err := m.cr.Get(ctx, PreffixKey+CookieValue).Result()
+	if err != nil {
+		return 0, err
 	}
-	uv := u.(UserValid)
-	if uv.Valid.Before(time.Now()) {
-		m.DeleteCookie(CookieValue)
-		return 0, cookie_errors.NewExpiredCookie()
-	}
-	return uv.UserID, nil
+	return strconv.ParseInt(u_id, 10, 64)
+
 }
 
-func (m CookieMapRepository) DeleteCookie(name string) {
-	m.cookies.Delete(name)
-}
-
-func (m CookieMapRepository) AddCookie(cookie http.Cookie, UserID int64) {
-	m.cookies.Store(cookie.Value, UserValid{
-		UserID: UserID,
-		Valid:  cookie.Expires,
-	})
+func (m CookieRedisRepository) AddCookie(ctx context.Context, cookie http.Cookie, UserID int64) {
+	m.cr.Set(ctx, PreffixKey+cookie.Value, UserID, time.Until(cookie.Expires))
 }
 
 func NewRepository() CookieRepository {
-	return CookieMapRepository{
-		cookies: &sync.Map{},
+	log.Println("Start Redis")
+	return CookieRedisRepository{
+		cr: redis.NewClient(&redis.Options{
+			Addr:         "redis:6379",
+			Password:     "",
+			DB:           0,
+			ReadTimeout:  time.Second,
+			WriteTimeout: time.Second,
+		}),
 	}
 }
